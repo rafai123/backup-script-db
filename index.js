@@ -1,5 +1,5 @@
 const { Client } = require("pg");
-const  AWS = require('aws-sdk');
+const AWS = require('aws-sdk');
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
@@ -7,8 +7,6 @@ const cron = require('node-cron');
 const DATABASE_URL = "postgresql://nextvul:nextvul123@103.191.92.126:5433/fatkid";
 
 const s3 = new AWS.S3({
-    // accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    // secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     region: "auto",
     endpoint: process.env.ENDPOINT,
     credentials: {
@@ -19,6 +17,7 @@ const s3 = new AWS.S3({
 
 const BUCKET_NAME = "fullstack-team";
 
+// Backup function
 async function backupDatabase() {
     const client = new Client({ connectionString: DATABASE_URL });
 
@@ -40,25 +39,25 @@ async function backupDatabase() {
             stream.pipe(fileStream)
             stream.on("end", resolve)
             stream.on("error", reject)
-        })
+        });
 
         console.log(`✅ Backup saved at ${backupFilePath}`);
 
         // Upload backup file to S3
-        const fileContent = fs.readFileSync(backupFilePath)
+        const fileContent = fs.readFileSync(backupFilePath);
 
         const uploadParams = {
             Bucket: BUCKET_NAME,
             Key: backupFileName,
             Body: fileContent,
             ContentType: 'application/sql'
-        }
+        };
 
         const uploadResult = await s3.upload(uploadParams).promise();
 
         console.log(`✅ Backup uploaded to S3: ${uploadResult.Location}`);
-        
-        // Hapus file lokal
+
+        // Delete temporary file
         fs.unlinkSync(backupFilePath);
         console.log(`🧹 Temporary file deleted: ${backupFilePath}`);
 
@@ -70,10 +69,11 @@ async function backupDatabase() {
     }
 }
 
+// Schedule backup every hour
 cron.schedule('0 * * * *', backupDatabase);
 console.log('⏰ Scheduled backup script started. Running every hour...');
 
-// Ekspor function sebagai handler API Vercel
+// Export the function as the handler for API requests
 module.exports = async (req, res) => {
     if (req.method === 'GET') {
         try {
