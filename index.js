@@ -72,3 +72,19 @@ async function backupDatabase() {
 
 cron.schedule('0 * * * *', backupDatabase);
 console.log('⏰ Scheduled backup script started. Running every hour...');
+
+// Ekspor function sebagai handler API Vercel
+module.exports = async (req, res) => {
+    if (req.method === 'GET') {
+        try {
+            console.log('⏰ Running scheduled backup...');
+            await backupDatabase();
+            res.status(200).json({ message: 'Backup successful!' });
+        } catch (error) {
+            console.error('❌ Error during scheduled backup:', error);
+            res.status(500).json({ error: 'Backup failed' });
+        }
+    } else {
+        res.status(405).json({ message: 'Method Not Allowed' });
+    }
+};
